@@ -1,0 +1,402 @@
+import pygame
+from PIL import Image
+from environnement import GRID_SIZE
+from game import Game
+from assassin import Assassin
+from tank import Tank
+from ghost import Ghost
+from tower_knight import Tower_Knight
+from dragon import Dragon
+
+# Initialiser Pygame
+pygame.init()
+pygame.mixer.init()
+
+# Charger et jouer la musique de fond
+background_music_path = 'assets/son.mp3'  
+music_playing = True
+try:
+    pygame.mixer.music.load(background_music_path)
+    pygame.mixer.music.play(-1)  
+    pygame.mixer.music.set_volume(0.5)  
+except FileNotFoundError:
+    print(f"Erreur : Le fichier audio '{background_music_path}' n'a pas été trouvé.")
+
+
+# Générer la fenêtre de notre jeu
+WIDTH = 640 
+HEIGHT = 640
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Clash of Multiverses")
+
+
+## Charger et redimensionner l'arrière-plan avec Pillow
+background_image_path = 'assets/image_multiverse.png'
+resized_background_image_path = 'assets/image_multiverse_resized.png'
+
+# Redimensionner l'image si ce n'est pas déjà fait
+try:
+    image = Image.open(background_image_path)
+    new_size = (WIDTH, HEIGHT)  # Adapter à la taille de la fenêtre
+    image = image.resize(new_size)
+    image.save(resized_background_image_path)  # Sauvegarder l'image redimensionnée
+except FileNotFoundError:
+    print(f"Erreur : L'image '{background_image_path}' n'a pas été trouvée.")
+    pygame.quit()
+    exit()
+
+
+# Charger l'image redimensionnée dans Pygame
+background = pygame.image.load(resized_background_image_path)
+
+# Importer charger logo
+logo = pygame.image.load('assets/logo.png')
+logo = pygame.transform.scale(logo, (200, 200))
+logo_rect = logo.get_rect()
+logo_rect.x = 225
+logo_rect.y = 50
+
+# Importer le bouton rules
+rules_button = pygame.image.load('assets/rules.jpg')
+rules_button = pygame.transform.scale(rules_button, (100, 100))
+rules_button_rect = rules_button.get_rect()
+rules_button_rect.x = 200
+rules_button_rect.y = 300
+
+# Importer le bouton personnage
+personnage_button = pygame.image.load('assets/personnage.jpg')
+personnage_button = pygame.transform.scale(personnage_button, (100, 100))
+personnage_button_rect = personnage_button.get_rect()
+personnage_button_rect.x = 400
+personnage_button_rect.y = 300
+
+# Bouton pour arrêter ou redémarrer la musique
+music_button = pygame.Rect(WIDTH // 2 - 75, HEIGHT - 60, 150, 40)
+
+# Fonction pour activer/désactiver la musique
+def toggle_music():
+    global music_playing
+    if music_playing:
+        pygame.mixer.music.pause()  # Mettre la musique en pause
+        music_playing = False
+    else:
+        pygame.mixer.music.unpause()  # Reprendre la musique
+        music_playing = True
+
+# Fonction pour afficher le bouton "Music On/Off"
+def draw_music_button():
+    global music_playing
+    pygame.draw.rect(screen, (0, 127, 255), music_button)
+    button_text = "Music: On" if music_playing else "Music: Off"
+    font = pygame.font.Font(None, 28)
+    text_surface = font.render(button_text, True, (255, 255, 255))
+    screen.blit(text_surface, (music_button.x + 10, music_button.y + 10))
+
+# Fonction pour gérer les événements communs 
+def handle_common_events(event):
+    global music_playing
+    if event.type == pygame.MOUSEBUTTONDOWN:
+        if music_button.collidepoint(event.pos):
+            toggle_music()
+
+def show_rules():
+    running = True
+    font = pygame.font.Font(None, 28)  # Police pour le texte des règles
+    rules_text = [
+        "Bienvenue dans Clash of Multiverses !",
+        "1. Chaque joueur choisit 4 personnages.",
+        "2. Déplacez vos personnages et combattez l'adversaire.",
+        "3. Le premier joueur à éliminer l'équipe ennemie gagne.",
+        "Attention : n'essayer pas d'aller nager dans l'eau ou vous",
+        "perderez la vie.",
+        "Et je vous conseil de rester éloigner des cactus qui vous",
+        "ferons perdre des points de vie.",
+        "Bonne chance !"
+    ]
+    # Créer un bouton "Retour"
+    back_button = pygame.Rect(WIDTH // 2 - 75, HEIGHT - 100, 150, 50)
+
+    while running:
+        screen.fill((43, 28, 69))  
+
+        # Afficher les règles
+        for i, line in enumerate(rules_text):
+            text_surface = font.render(line, True, (244, 216, 206))
+            screen.blit(text_surface, (50, 50 + i * 40))
+
+        # Afficher le bouton "Retour"
+        pygame.draw.rect(screen, (255, 127, 0), back_button)  
+        back_text = font.render("Retour", True, (255, 255, 255))  
+        screen.blit(back_text, (back_button.x + 25, back_button.y + 10))
+
+        draw_music_button() 
+        pygame.display.flip()
+
+        # Gérer les événements
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                exit()
+            handle_common_events(event)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    running = False  # Quitter la fenêtre des règles
+
+def show_character_help(character):
+    running = True
+    font = pygame.font.Font(None, 20)  # Police pour le texte
+    character_helps = {
+        "Assassin": [
+            "- Compétence 1 (touche a) : Coup de couteau basique (dégâts physiques)",
+            "- Compétence 2 (touche z) : Coup de couteau perçant (ignore armure)",
+            "- Compétence 3 (touche e) : Coup de lame magique (dégâts magiques)"
+        ],
+        "Tower_Knight": [
+            "- Compétence 1 (touche a) : Coup de bouclier (dégâts de zone brut)",
+            "- Compétence 2 (touche z) : Coup de lance perçant (dégâts physiques)",
+            "- Compétence 3 (touche e) : Lance magique (dégâts de zone magiques)"
+        ],
+        "Tank": [
+            "- Compétence 1 (touche a) : Tir d'obus transperçant (dégâts physiques)",
+            "- Compétence 2 (touche z) : Tir d'obus explosif (dégâts de zone)",
+            "- Compétence 3 (touche e) : Tir d'obus magique (dégâts de zone magiques)"
+        ],
+        "Ghost": [
+            "- Compétence 1 (touche a) : Multiples coups de couteau (dégâts physiques)",
+            "- Compétence 2 (touche z) : Lancers de couteaux (60% de réussite, dégâts physiques)",
+            "- Compétence 3 (touche e) : Coup de couteau perçant (ignore armure)"
+        ],
+        "Dragon": [
+            "- Compétence 1 (touche a) : Coup de griffes (dégâts physiques)",
+            "- Compétence 2 (touche z) : Boule de feu (dégâts magiques de zone)",
+            "- Compétence 3 (touche e) : Laser magique (dégâts magiques perçants)"
+        ],
+    }
+    # Créer un bouton "Retour"
+    back_button = pygame.Rect(WIDTH // 2 - 175, HEIGHT - 100, 150, 50)
+
+    while running:
+        screen.fill((43, 28, 69))  # Fond violet
+
+        # Afficher le nom du personnage
+        character_text = font.render(f"Compétences de {character} :", True, (244, 216, 206))
+        screen.blit(character_text, (50, 50))
+
+        # Afficher les compétences du personnage
+        y_offset = 100
+        if character in character_helps:
+            for help_text in character_helps[character]:
+                help_surface = font.render(help_text, True, (244, 216, 206))
+                screen.blit(help_surface, (50, y_offset))
+                y_offset += 30
+
+        # Afficher le bouton "Retour"
+        pygame.draw.rect(screen, (255, 127, 0), back_button)  # Rectangle orange
+        back_text = font.render("Retour", True, (255, 255, 255))  # Texte blanc
+        screen.blit(back_text, (back_button.x + 50, back_button.y + 20))
+
+        pygame.display.flip()
+
+        # Gérer les événements
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    running = False  # Quitter la fenêtre d'aide
+
+def choose_characters():
+    running = True
+    font = pygame.font.Font(None, 28)  # Police pour le texte
+    selected_player1 = []
+    selected_player2 = []
+
+    # Dictionnaire des classes d'unités (avec leurs arguments requis)
+    character_classes = {
+        "Assassin": Assassin,
+        "Tank": Tank,
+        "Ghost": Ghost,
+        "Tower_Knight": Tower_Knight,
+        "Dragon" : Dragon
+    }
+
+    # Charger les images des personnages
+    character_images = {
+        "Assassin": pygame.image.load('assets/Assassin4bis.png'),
+        "Tank": pygame.image.load('assets/Tank1bis.png'),
+        "Ghost": pygame.image.load('assets/Ghost1.png'),
+        "Tower_Knight": pygame.image.load('assets/TK7bis.png'),
+        "Dragon": pygame.image.load('assets/Dragon1bis.png')
+    }
+
+    # Boutons pour les personnages Player 1 et Player 2
+    character_buttons_player1 = []
+    character_buttons_player2 = []
+
+    # Boutons d'aide pour chaque personnage 
+    help_buttons_player1 = {}
+    help_buttons_player2 = {}
+
+    # Positionner les boutons pour Player 1
+    characters = list(character_classes.keys())
+    for i, char in enumerate(characters):
+        button_rect = pygame.Rect(40 + i * 110, 80, 100, 100)
+        character_buttons_player1.append((char, button_rect))
+
+        # Boutons d'aide (Player 1)
+        help_button_rect = pygame.Rect(40 + i * 110 + 80, 200, 20, 20)  # Petite icône "?"
+        help_buttons_player1[char] = help_button_rect
+
+    # Positionner les boutons pour Player 2
+    for i, char in enumerate(characters):
+        button_rect = pygame.Rect(40 + i * 110, 350, 100, 100)
+        character_buttons_player2.append((char, button_rect))
+
+        # Boutons d'aide (Player 2)
+        help_button_rect = pygame.Rect(40 + i * 110 + 80, 470, 20, 20)  # Petite icône "?"
+        help_buttons_player2[char] = help_button_rect
+
+    # Bouton "Play"
+    play_button = pygame.Rect(WIDTH // 2 - 75, HEIGHT - 100, 150, 50)
+
+    while running:
+        screen.fill((26, 26, 64))  
+
+        # Titre pour chaque joueur
+        player1_text = font.render("Player 1: Choisissez 4 personnages", True, (244, 216, 206))
+        player2_text = font.render("Player 2: Choisissez 4 personnages", True, (244, 216, 206))
+        screen.blit(player1_text, (50, 50))
+        screen.blit(player2_text, (40, 300))
+
+        # Afficher les boutons pour Player 1
+        for char, button_rect in character_buttons_player1:
+            pygame.draw.rect(screen, (0, 0, 255), button_rect)
+            char_image = pygame.transform.scale(character_images[char], (80, 80))
+            screen.blit(char_image, (button_rect.x + 10, button_rect.y + 10))
+
+        # Afficher les boutons pour Player 2
+        for char, button_rect in character_buttons_player2:
+            pygame.draw.rect(screen, (255, 127, 0), button_rect)
+            char_image = pygame.transform.scale(character_images[char], (80, 80))
+            screen.blit(char_image, (button_rect.x + 10, button_rect.y + 10))
+
+        # Afficher les personnages sélectionnés pour Player 1
+        for i, unit in enumerate(selected_player1):
+            selected_image = pygame.transform.scale(character_images[unit.nom], (40, 40))
+            screen.blit(selected_image, (50 + i * 60, 250))
+
+        # Afficher les personnages sélectionnés pour Player 2
+        for i, unit in enumerate(selected_player2):
+            selected_image = pygame.transform.scale(character_images[unit.nom], (40, 40))
+            screen.blit(selected_image, (50 + i * 60, 500))
+
+        # Afficher les boutons d'aide pour Player 1
+        for char, help_button_rect in help_buttons_player1.items():
+            pygame.draw.rect(screen, (255, 255, 0), help_button_rect)  # Couleur jaune pour "?"
+            help_text = font.render("?", True, (0, 0, 0))
+            screen.blit(help_text, (help_button_rect.x + 5, help_button_rect.y + 2))
+
+        # Afficher les boutons d'aide pour Player 2
+        for char, help_button_rect in help_buttons_player2.items():
+            pygame.draw.rect(screen, (255, 255, 0), help_button_rect)  # Couleur jaune pour "?"
+            help_text = font.render("?", True, (0, 0, 0))
+            screen.blit(help_text, (help_button_rect.x + 5, help_button_rect.y + 2))
+
+        # Afficher le bouton "Play"
+        if len(selected_player1) == 4 and len(selected_player2) == 4:              #Ne pas oublier de modifier cette ligne pour le nombre de personnages
+            pygame.draw.rect(screen, (0, 255, 0), play_button)
+            play_text = font.render("Play", True, (255, 255, 255))
+            screen.blit(play_text, (play_button.x + 35, play_button.y + 10))
+        else:
+            pygame.draw.rect(screen, (200, 200, 200), play_button)
+            play_text = font.render("Play", True, (150, 150, 150))
+            screen.blit(play_text, (play_button.x + 35, play_button.y + 10))
+
+        draw_music_button() 
+        pygame.display.flip()
+
+
+        # Gérer les événements
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+                exit()
+            handle_common_events(event)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Sélection pour Player 1
+                if len(selected_player1) < 4:   #Ne pas oublier de modifier cette ligne pour le nombre de personnages
+                    for char, button_rect in character_buttons_player1:
+                        if button_rect.collidepoint(event.pos) and char not in selected_player1:
+                            selected_player1.append(character_classes[char](0, i, "Player1"))
+
+                # Sélection pour Player 2
+                elif len(selected_player2) < 4:  #Ne pas oublier de modifier cette ligne pour le nombre de personnages
+                    for char, button_rect in character_buttons_player2:
+                        if button_rect.collidepoint(event.pos) and char not in selected_player2:
+                            selected_player2.append(character_classes[char](GRID_SIZE - 1, i, "Player2"))
+
+                # Gérer les clics sur les boutons d'aide pour Player 1
+                for char, help_button_rect in help_buttons_player1.items():
+                    if help_button_rect.collidepoint(event.pos):
+                        show_character_help(char)
+
+                # Gestion des clics sur les boutons d'aide (Player 2)
+                for char, help_button_rect in help_buttons_player2.items():
+                    if help_button_rect.collidepoint(event.pos):
+                        show_character_help(char)
+
+                # Gestion des clics sur les boutons d'aide pour Player 2 
+                for char, help_button_rect in help_buttons_player2.items():
+                    if help_button_rect.collidepoint(event.pos):
+                        show_character_help(char)
+
+                # Lancer le jeu si "Play" est cliqué
+                if play_button.collidepoint(event.pos) and len(selected_player1) == 4 and len(selected_player2) == 4: #Ne pas oublier de modifier cette ligne pour le nombre de personnages
+                    # Définir les positions initiales des personnages
+                    selected_player1[0].x, selected_player1[0].y = 0, 0  
+                    selected_player1[1].x, selected_player1[1].y = 1, 0 
+                    selected_player1[2].x, selected_player1[2].y = 2, 0  
+                    selected_player1[3].x, selected_player1[3].y = 3, 0              #Ne pas oublier de modifier cette ligne pour le nombre de personnages
+
+                    selected_player2[0].x, selected_player2[0].y = 12, GRID_SIZE - 1
+                    selected_player2[1].x, selected_player2[1].y = 13, GRID_SIZE - 1
+                    selected_player2[2].x, selected_player2[2].y = 14, GRID_SIZE - 1
+                    selected_player2[3].x, selected_player2[3].y = 15, GRID_SIZE - 1  
+                    return selected_player1, selected_player2  
+
+def main():
+
+    # Variable pour maintenir le jeu en cours
+    running = True
+
+    # Boucle principale
+    while running:
+        screen.blit(background, (0, 0))
+        screen.blit(logo, logo_rect)
+        screen.blit(rules_button, rules_button_rect)
+        screen.blit(personnage_button, personnage_button_rect)
+        draw_music_button()
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                pygame.quit()
+            handle_common_events(event)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if rules_button_rect.collidepoint(event.pos):
+                    show_rules()
+
+                if personnage_button_rect.collidepoint(event.pos):
+                    selected_player1, selected_player2 = choose_characters()
+                    game = Game(screen)
+                    game.start(selected_player1, selected_player2)
+                    running = False
+
+if __name__ == "__main__":
+    main()
