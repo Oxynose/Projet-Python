@@ -14,9 +14,9 @@ herbe = pygame.image.load("assets/herbe.jpg")
 herbe = pygame.transform.scale(herbe, (CELL_SIZE, CELL_SIZE))
 tree = pygame.image.load("assets/tree.jpeg")
 tree = pygame.transform.scale(tree, (CELL_SIZE, CELL_SIZE))
-eau = pygame.image.load("eau.jpg")
+eau = pygame.image.load("assets/eau.jpg")
 eau = pygame.transform.scale(eau, (CELL_SIZE, CELL_SIZE))
-cactus = pygame.image.load("image_cactus.jpg")
+cactus = pygame.image.load("assets/image_cactus.jpg")
 cactus = pygame.transform.scale(cactus, (CELL_SIZE, CELL_SIZE))
 
 # CREATION CLASSE BLOCK abstraite
