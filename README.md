@@ -17,8 +17,6 @@ Master 1 -  Engineering for Health, Mechatronic Systems for Rehabilitation (M1-I
 
 ### List of contributors : 
 - GUERIN Jacques: jacques.guerin@etu.sorbonne-universite.fr
-- PORTENEUVE Margot: margot.porteneuve@etu.sorbonne-universite.fr
-- ALAOUI MRANI Ahmed: ahmed.alaoui-mrani@etu.sorbonne-universite.fr
 
 ### University supervisors: 
 - Louis ANNABI: louis.annabi@sorbonne-universite.fr
